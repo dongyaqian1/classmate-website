@@ -5,99 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>管理页 - 同学录</title>
   <link rel="stylesheet" href="/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
-    .login-box {
-      max-width: 400px;
-      margin: 60px auto;
-      text-align: center;
-    }
-    .card-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 24px;
-    }
-    .card {
-      background: white;
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-      position: relative;
-      transition: transform 0.2s;
-    }
+    .login-box { max-width: 400px; margin: 60px auto; text-align: center; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
+    .card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); position: relative; transition: transform 0.2s; }
     .card:hover { transform: translateY(-4px); }
-    .card img {
-      width: 100%;
-      height: 250px;
-      object-fit: cover;
-    }
-    .card-body {
-      padding: 20px;
-    }
-    .card-body h3 {
-      margin: 0 0 8px;
-      font-size: 1.3em;
-    }
-    .card-body p {
-      color: #555;
-      line-height: 1.7;
-      margin: 0 0 12px;
-      white-space: pre-wrap;
-    }
-    .card-body time {
-      color: #999;
-      font-size: 0.85em;
-    }
-    .btn-delete {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      background: rgba(255,255,255,0.9);
-      border: none;
-      border-radius: 50%;
-      width: 36px;
-      height: 36px;
-      cursor: pointer;
-      font-size: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      transition: opacity 0.2s;
-      z-index: 10;
-    }
+    .card img { width: 100%; height: 250px; object-fit: cover; }
+    .card-body { padding: 20px; }
+    .card-body h3 { margin: 0 0 8px; font-size: 1.3em; }
+    .card-body p { color: #555; line-height: 1.7; margin: 0 0 12px; white-space: pre-wrap; }
+    .card-body time { color: #999; font-size: 0.85em; }
+    .btn-delete { position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; z-index: 10; }
     .card:hover .btn-delete { opacity: 1; }
     .btn-delete:hover { background: #ff4444; color: white; }
-    .stats {
-      text-align: center;
-      margin-bottom: 30px;
-      padding: 20px;
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    }
-    .stats span {
-      font-size: 1.1em;
-      color: #666;
-    }
-    .stats strong {
-      color: #6c5ce7;
-      font-size: 1.5em;
-    }
-    .btn-logout {
-      background: none;
-      border: 1px solid #ddd;
-      padding: 8px 20px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.9em;
-      margin-top: 10px;
-    }
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: #999;
-    }
+    .stats { text-align: center; margin-bottom: 30px; padding: 20px; background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .stats span { font-size: 1.1em; color: #666; }
+    .stats strong { color: #6c5ce7; font-size: 1.5em; }
+    .btn-logout { background: none; border: 1px solid #ddd; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9em; margin-top: 10px; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
     .empty-state .icon { font-size: 64px; display: block; margin-bottom: 16px; }
   </style>
 </head>
@@ -122,13 +47,10 @@
         <h1>📖 同学录管理</h1>
         <button class="btn-logout" onclick="logout()">退出登录</button>
       </header>
-
       <div class="stats" id="stats" style="display:none;">
         <span>共有 <strong id="totalCount">0</strong> 条同学留言</span>
       </div>
-
       <div class="card-grid" id="cardGrid"></div>
-
       <div class="empty-state" id="emptyState" style="display:none;">
         <span class="icon">📭</span>
         <p>还没有同学留言，快把这个页面发给同学们吧！</p>
@@ -137,21 +59,30 @@
   </div>
 
   <script>
-    // ===== Supabase 配置 =====
-    const SUPABASE_URL = 'https://hicvyyrcgmdllziatmmn.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_XLDS1HhEzHZKmLSW0sLhWg_EZBpyLNf';
-    var supabase = null;
-    try {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    } catch (e) {
-      console.error('Supabase 初始化失败', e);
+    // ===== 配置 =====
+    var SUPABASE_URL = 'https://hicvyyrcgmdllziatmmn.supabase.co';
+    var SUPABASE_KEY = 'sb_publishable_XLDS1HhEzHZKmLSW0sLhWg_EZBpyLNf';
+    var ADMIN_PASSWORD = '929566';
+    var password = '';
+
+    // ===== Supabase API 封装 =====
+    function api(path, options) {
+      options = options || {};
+      options.headers = options.headers || {};
+      options.headers['apikey'] = SUPABASE_KEY;
+      options.headers['Authorization'] = 'Bearer ' + SUPABASE_KEY;
+      if (!options.headers['Content-Type'] && options.body && !(options.body instanceof FormData)) {
+        options.headers['Content-Type'] = 'application/json';
+      }
+      return fetch(SUPABASE_URL + path, options).then(function(r) {
+        if (!r.ok) return r.text().then(function(t) { throw new Error(r.status + ': ' + t); });
+        var ct = r.headers.get('content-type') || '';
+        return ct.indexOf('application/json') !== -1 ? r.json() : r.text();
+      });
     }
 
-    // ===== 管理密码 =====
-    const ADMIN_PASSWORD = '929566';
-    let password = '';
-
-    document.getElementById('passwordInput').addEventListener('keydown', (e) => {
+    // ===== 登录 =====
+    document.getElementById('passwordInput').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') login();
     });
 
@@ -164,35 +95,18 @@
         return;
       }
 
-      // 检查 Supabase 库是否加载
-      if (!supabase) {
-        showError('页面资源加载中，请刷新重试');
-        return;
-      }
-
       try {
-        // 从 Supabase 加载数据
-        const { data, error } = await supabase
-          .from('classmates')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          showError('加载失败：' + error.message);
-          return;
-        }
-
+        var data = await api('/rest/v1/classmates?select=*&order=created_at.desc');
         document.getElementById('loginView').style.display = 'none';
         document.getElementById('adminView').style.display = 'block';
         renderCards(data);
       } catch (e) {
-        showError('网络错误，请检查网络后刷新重试');
-        console.error(e);
+        showError('加载失败：' + e.message);
       }
     }
 
     function showError(msg) {
-      const err = document.getElementById('loginError');
+      var err = document.getElementById('loginError');
       err.textContent = msg;
       err.style.display = 'block';
     }
@@ -204,10 +118,11 @@
       document.getElementById('passwordInput').value = '';
     }
 
+    // ===== 渲染卡片 =====
     function renderCards(data) {
-      const grid = document.getElementById('cardGrid');
-      const stats = document.getElementById('stats');
-      const empty = document.getElementById('emptyState');
+      var grid = document.getElementById('cardGrid');
+      var stats = document.getElementById('stats');
+      var empty = document.getElementById('emptyState');
 
       if (!data || data.length === 0) {
         stats.style.display = 'none';
@@ -220,55 +135,44 @@
       empty.style.display = 'none';
       document.getElementById('totalCount').textContent = data.length;
 
-      grid.innerHTML = data.map(item => `
-        <div class="card">
-          <button class="btn-delete" title="删除" onclick="deleteItem('${item.id}', '${escapeHtml(item.photo_url)}')">🗑</button>
-          <img src="${escapeHtml(item.photo_url)}" alt="${escapeHtml(item.name)}" loading="lazy">
-          <div class="card-body">
-            <h3>${escapeHtml(item.name)}</h3>
-            <p>${escapeHtml(item.message)}</p>
-            <time>${new Date(item.created_at).toLocaleString('zh-CN')}</time>
-          </div>
-        </div>
-      `).join('');
+      grid.innerHTML = data.map(function(item) {
+        return '<div class="card">' +
+          '<button class="btn-delete" title="删除" onclick="deleteItem(\'' + item.id + '\',\'' + esc(item.photo_url) + '\')">🗑</button>' +
+          '<img src="' + esc(item.photo_url) + '" alt="' + esc(item.name) + '" loading="lazy">' +
+          '<div class="card-body">' +
+          '<h3>' + esc(item.name) + '</h3>' +
+          '<p>' + esc(item.message) + '</p>' +
+          '<time>' + new Date(item.created_at).toLocaleString('zh-CN') + '</time>' +
+          '</div></div>';
+      }).join('');
     }
 
+    function esc(s) {
+      var d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML.replace(/'/g, "\\'");
+    }
+
+    // ===== 删除 =====
     async function deleteItem(id, photoUrl) {
-      if (!confirm('确定要删除这条留言吗？此操作不可恢复。')) return;
+      if (!confirm('确定要删除这条留言吗？')) return;
 
-      // 1. 删除数据库记录
-      const { error } = await supabase
-        .from('classmates')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        alert('删除失败：' + error.message);
-        return;
-      }
-
-      // 2. 尝试删除照片（从 URL 提取文件名）
       try {
-        const urlParts = photoUrl.split('/');
-        const fileName = urlParts[urlParts.length - 1];
-        await supabase.storage.from('photos').remove([fileName]);
+        await api('/rest/v1/classmates?id=eq.' + id, { method: 'DELETE' });
+
+        // 删除照片
+        try {
+          var parts = photoUrl.split('/');
+          var fileName = parts[parts.length - 1];
+          await api('/storage/v1/object/photos/' + fileName, { method: 'DELETE' });
+        } catch (e) {}
+
+        // 刷新列表
+        var data = await api('/rest/v1/classmates?select=*&order=created_at.desc');
+        renderCards(data);
       } catch (e) {
-        // 照片删除失败不影响整体
+        alert('删除失败：' + e.message);
       }
-
-      // 3. 刷新列表
-      const { data } = await supabase
-        .from('classmates')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      renderCards(data);
-    }
-
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
     }
   </script>
 </body>
