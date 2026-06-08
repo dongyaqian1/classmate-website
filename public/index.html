@@ -53,7 +53,12 @@
     // ===== Supabase 配置 =====
     const SUPABASE_URL = 'https://hicvyyrcgmdllziatmmn.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_XLDS1HhEzHZKmLSW0sLhWg_EZBpyLNf';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    var supabase = null;
+    try {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    } catch (e) {
+      console.error('Supabase 初始化失败', e);
+    }
 
     // ===== 照片上传预览 =====
     const photoInput = document.getElementById('photo');
