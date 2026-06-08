@@ -1,0 +1,15 @@
+{
+  "name": "classmate-website",
+  "version": "1.0.0",
+  "description": "同学录 - 记录同学姓名、照片和留言",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1",
+    "uuid": "^10.0.0"
+  }
+}

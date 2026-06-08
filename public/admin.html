@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理页 - 同学录</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .login-box {
+      max-width: 400px;
+      margin: 60px auto;
+      text-align: center;
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 24px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      position: relative;
+      transition: transform 0.2s;
+    }
+    .card:hover { transform: translateY(-4px); }
+    .card img {
+      width: 100%;
+      height: 250px;
+      object-fit: cover;
+    }
+    .card-body {
+      padding: 20px;
+    }
+    .card-body h3 {
+      margin: 0 0 8px;
+      font-size: 1.3em;
+    }
+    .card-body p {
+      color: #555;
+      line-height: 1.7;
+      margin: 0 0 12px;
+      white-space: pre-wrap;
+    }
+    .card-body time {
+      color: #999;
+      font-size: 0.85em;
+    }
+    .btn-delete {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255,255,255,0.9);
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .card:hover .btn-delete { opacity: 1; }
+    .btn-delete:hover { background: #ff4444; color: white; }
+    .stats {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .stats span {
+      font-size: 1.1em;
+      color: #666;
+    }
+    .stats strong {
+      color: #6c5ce7;
+      font-size: 1.5em;
+    }
+    .btn-logout {
+      background: none;
+      border: 1px solid #ddd;
+      padding: 8px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9em;
+      margin-top: 10px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+    .empty-state .icon { font-size: 64px; display: block; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <!-- 登录界面 -->
+    <div id="loginView">
+      <div class="login-box">
+        <h1>🔐 管理员登录</h1>
+        <p style="color:#888;margin-bottom:24px;">请输入密码查看同学录内容</p>
+        <div class="form-group">
+          <input type="password" id="passwordInput" placeholder="请输入管理密码" style="text-align:center;font-size:1.1em;">
+        </div>
+        <button class="btn-submit" onclick="login()" style="width:100%;">登录</button>
+        <p id="loginError" style="color:#ff4444;margin-top:12px;display:none;"></p>
+      </div>
+    </div>
+
+    <!-- 管理界面 -->
+    <div id="adminView" style="display:none;">
+      <header>
+        <h1>📖 同学录管理</h1>
+        <button class="btn-logout" onclick="logout()">退出登录</button>
+      </header>
+
+      <div class="stats" id="stats" style="display:none;">
+        <span>共有 <strong id="totalCount">0</strong> 条同学留言</span>
+      </div>
+
+      <div class="card-grid" id="cardGrid"></div>
+
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <span class="icon">📭</span>
+        <p>还没有同学留言，快把这个页面发给同学们吧！</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let password = '';
+
+    document.getElementById('passwordInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') login();
+    });
+
+    async function login() {
+      password = document.getElementById('passwordInput').value;
+      if (!password) return;
+
+      const res = await fetch('/api/list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('loginView').style.display = 'none';
+        document.getElementById('adminView').style.display = 'block';
+        renderCards(data.data);
+      } else {
+        const err = document.getElementById('loginError');
+        err.textContent = '密码错误';
+        err.style.display = 'block';
+      }
+    }
+
+    function logout() {
+      password = '';
+      document.getElementById('loginView').style.display = 'block';
+      document.getElementById('adminView').style.display = 'none';
+      document.getElementById('passwordInput').value = '';
+    }
+
+    function renderCards(data) {
+      const grid = document.getElementById('cardGrid');
+      const stats = document.getElementById('stats');
+      const empty = document.getElementById('emptyState');
+
+      if (!data || data.length === 0) {
+        stats.style.display = 'none';
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+
+      stats.style.display = 'block';
+      empty.style.display = 'none';
+      document.getElementById('totalCount').textContent = data.length;
+
+      grid.innerHTML = data.map(item => `
+        <div class="card">
+          <button class="btn-delete" title="删除" onclick="deleteItem(${item.id})">🗑</button>
+          <img src="${escapeHtml(item.photo)}" alt="${escapeHtml(item.name)}" loading="lazy">
+          <div class="card-body">
+            <h3>${escapeHtml(item.name)}</h3>
+            <p>${escapeHtml(item.message)}</p>
+            <time>${item.created_at}</time>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function deleteItem(id) {
+      if (!confirm('确定要删除这条留言吗？此操作不可恢复。')) return;
+
+      const res = await fetch('/api/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, id })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        // 刷新列表
+        const listRes = await fetch('/api/list', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+        const listData = await listRes.json();
+        if (listData.success) renderCards(listData.data);
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
