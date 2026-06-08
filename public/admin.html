@@ -155,27 +155,41 @@
       if (!password) return;
 
       if (password !== ADMIN_PASSWORD) {
-        const err = document.getElementById('loginError');
-        err.textContent = '密码错误';
-        err.style.display = 'block';
+        showError('密码错误');
         return;
       }
 
-      // 从 Supabase 加载数据
-      const { data, error } = await supabase
-        .from('classmates')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        document.getElementById('loginError').textContent = '加载失败：' + error.message;
-        document.getElementById('loginError').style.display = 'block';
+      // 检查 Supabase 库是否加载
+      if (typeof supabase === 'undefined') {
+        showError('页面资源加载中，请刷新重试');
         return;
       }
 
-      document.getElementById('loginView').style.display = 'none';
-      document.getElementById('adminView').style.display = 'block';
-      renderCards(data);
+      try {
+        // 从 Supabase 加载数据
+        const { data, error } = await supabase
+          .from('classmates')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          showError('加载失败：' + error.message);
+          return;
+        }
+
+        document.getElementById('loginView').style.display = 'none';
+        document.getElementById('adminView').style.display = 'block';
+        renderCards(data);
+      } catch (e) {
+        showError('网络错误，请检查网络后刷新重试');
+        console.error(e);
+      }
+    }
+
+    function showError(msg) {
+      const err = document.getElementById('loginError');
+      err.textContent = msg;
+      err.style.display = 'block';
     }
 
     function logout() {
