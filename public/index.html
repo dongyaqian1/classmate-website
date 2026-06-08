@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>同学录 - 留下你的印记</title>
   <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
   <div class="container">
@@ -49,6 +50,11 @@
   </footer>
 
   <script>
+    // ===== Supabase 配置 =====
+    const SUPABASE_URL = 'https://hicvyyrcgmdllziatmmn.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_XLDS1HhEzHZKmLSW0sLhWg_EZBpyLNf';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
     // ===== 照片上传预览 =====
     const photoInput = document.getElementById('photo');
     const uploadArea = document.getElementById('uploadArea');
@@ -114,29 +120,50 @@
         return;
       }
 
-      submitBtn.disabled = true;
-      submitBtn.textContent = '提交中...';
+      if (photo.size > 10 * 1024 * 1024) {
+        showToast('照片不能超过 10MB', 'error');
+        return;
+      }
 
-      const formData = new FormData();
-      formData.append('name', name);
-      formData.append('message', message);
-      formData.append('photo', photo);
+      submitBtn.disabled = true;
+      submitBtn.textContent = '上传中...';
 
       try {
-        const res = await fetch('/api/submit', { method: 'POST', body: formData });
-        const data = await res.json();
+        // 1. 上传照片到 Supabase Storage
+        const fileExt = photo.name.split('.').pop();
+        const fileName = Date.now() + '-' + Math.random().toString(36).substring(2, 10) + '.' + fileExt;
 
-        if (data.success) {
-          showToast('✅ 提交成功！谢谢你的留言~', 'success');
-          form.reset();
-          preview.style.display = 'none';
-          uploadPlaceholder.style.display = '';
-          charCount.textContent = '0';
-        } else {
-          showToast('❌ ' + data.error, 'error');
-        }
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('photos')
+          .upload(fileName, photo, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) throw uploadError;
+
+        // 2. 获取照片公开 URL
+        const { data: urlData } = supabase.storage
+          .from('photos')
+          .getPublicUrl(fileName);
+
+        const photoUrl = urlData.publicUrl;
+
+        // 3. 保存记录到数据库
+        const { error: dbError } = await supabase
+          .from('classmates')
+          .insert([{ name, message, photo_url: photoUrl }]);
+
+        if (dbError) throw dbError;
+
+        showToast('✅ 提交成功！谢谢你的留言~', 'success');
+        form.reset();
+        preview.style.display = 'none';
+        uploadPlaceholder.style.display = '';
+        charCount.textContent = '0';
       } catch (err) {
-        showToast('❌ 网络错误，请稍后再试', 'error');
+        console.error(err);
+        showToast('❌ 提交失败：' + (err.message || '网络错误'), 'error');
       }
 
       submitBtn.disabled = false;

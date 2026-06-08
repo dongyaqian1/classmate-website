@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>管理页 - 同学录</title>
   <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     .login-box {
       max-width: 400px;
@@ -63,6 +64,7 @@
       justify-content: center;
       opacity: 0;
       transition: opacity 0.2s;
+      z-index: 10;
     }
     .card:hover .btn-delete { opacity: 1; }
     .btn-delete:hover { background: #ff4444; color: white; }
@@ -135,6 +137,13 @@
   </div>
 
   <script>
+    // ===== Supabase 配置 =====
+    const SUPABASE_URL = 'https://hicvyyrcgmdllziatmmn.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_XLDS1HhEzHZKmLSW0sLhWg_EZBpyLNf';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ===== 管理密码 =====
+    const ADMIN_PASSWORD = '929566';
     let password = '';
 
     document.getElementById('passwordInput').addEventListener('keydown', (e) => {
@@ -145,22 +154,28 @@
       password = document.getElementById('passwordInput').value;
       if (!password) return;
 
-      const res = await fetch('/api/list', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        document.getElementById('loginView').style.display = 'none';
-        document.getElementById('adminView').style.display = 'block';
-        renderCards(data.data);
-      } else {
+      if (password !== ADMIN_PASSWORD) {
         const err = document.getElementById('loginError');
         err.textContent = '密码错误';
         err.style.display = 'block';
+        return;
       }
+
+      // 从 Supabase 加载数据
+      const { data, error } = await supabase
+        .from('classmates')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        document.getElementById('loginError').textContent = '加载失败：' + error.message;
+        document.getElementById('loginError').style.display = 'block';
+        return;
+      }
+
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('adminView').style.display = 'block';
+      renderCards(data);
     }
 
     function logout() {
@@ -188,37 +203,47 @@
 
       grid.innerHTML = data.map(item => `
         <div class="card">
-          <button class="btn-delete" title="删除" onclick="deleteItem(${item.id})">🗑</button>
-          <img src="${escapeHtml(item.photo)}" alt="${escapeHtml(item.name)}" loading="lazy">
+          <button class="btn-delete" title="删除" onclick="deleteItem('${item.id}', '${escapeHtml(item.photo_url)}')">🗑</button>
+          <img src="${escapeHtml(item.photo_url)}" alt="${escapeHtml(item.name)}" loading="lazy">
           <div class="card-body">
             <h3>${escapeHtml(item.name)}</h3>
             <p>${escapeHtml(item.message)}</p>
-            <time>${item.created_at}</time>
+            <time>${new Date(item.created_at).toLocaleString('zh-CN')}</time>
           </div>
         </div>
       `).join('');
     }
 
-    async function deleteItem(id) {
+    async function deleteItem(id, photoUrl) {
       if (!confirm('确定要删除这条留言吗？此操作不可恢复。')) return;
 
-      const res = await fetch('/api/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, id })
-      });
+      // 1. 删除数据库记录
+      const { error } = await supabase
+        .from('classmates')
+        .delete()
+        .eq('id', id);
 
-      const data = await res.json();
-      if (data.success) {
-        // 刷新列表
-        const listRes = await fetch('/api/list', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password })
-        });
-        const listData = await listRes.json();
-        if (listData.success) renderCards(listData.data);
+      if (error) {
+        alert('删除失败：' + error.message);
+        return;
       }
+
+      // 2. 尝试删除照片（从 URL 提取文件名）
+      try {
+        const urlParts = photoUrl.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        await supabase.storage.from('photos').remove([fileName]);
+      } catch (e) {
+        // 照片删除失败不影响整体
+      }
+
+      // 3. 刷新列表
+      const { data } = await supabase
+        .from('classmates')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      renderCards(data);
     }
 
     function escapeHtml(str) {
